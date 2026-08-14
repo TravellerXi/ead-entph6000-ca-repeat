@@ -4,6 +4,15 @@
 #   rolling   -> kubectl rollout undo, for services released with RollingUpdate
 #   bluegreen -> switch the Service selector back to the previous slot
 #   helm      -> helm rollback, which reverts every object in the release at once
+#
+# BREAK-GLASS ONLY. Argo CD owns this namespace with selfHeal enabled, so every
+# mode below is reverted within seconds unless auto-sync is paused first:
+#
+#   kubectl -n argocd patch application ead-platform --type merge \
+#     -p '{"spec":{"syncPolicy":{"automated":null}}}'
+#
+# The routine rollback path is the CD workflow's revert job, which puts the
+# previous desired state back into Git so the change survives reconciliation.
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ead-platform}"

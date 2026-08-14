@@ -147,18 +147,21 @@ Show the URLs on screen (frontend, Argo CD, CI, CD).
 | A1 Architecture | 1:30 | 1:30 |
 | A2 Pipeline structure | 1:30 | 3:00 |
 | A3 CI run | 2:00 | 5:00 |
-| A4 IaC | 2:00 | 7:00 |
-| A5 RollingUpdate | 1:30 | 8:30 |
-| A6 Blue/Green | 2:00 | 10:30 |
-| A7 Additional features | 3:00 | 13:30 |
-| B1 Choices | 1:30 | 15:00 |
-| B2 Release plan | 2:00 | 17:00 |
-| B3 Backup | 1:00 | 18:00 |
-| B4 Security | 1:30 | 19:30 |
-| B5 Sustainability | 1:00 | 20:30 |
-| Close | 0:30 | **21:00** |
+| A4 IaC | 1:30 | 6:30 |
+| A5 RollingUpdate | 1:30 | 8:00 |
+| A6 Blue/Green | 2:00 | 10:00 |
+| A7 Additional features | 3:00 | 13:00 |
+| B1 Choices | 1:30 | 14:30 |
+| B2 Release plan | 2:00 | 16:30 |
+| B3 Backup | 1:00 | 17:30 |
+| B4 Security | 1:00 | 18:30 |
+| B5 Sustainability | 1:00 | 19:30 |
+| Close | 0:30 | **20:00** |
 
-> **Over budget by 1:00.** Trim A4 to 1:30 and B4 to 1:00 → **20:00**. If further compression is needed, shorten A1 rather than A7: the additional features segment carries 20 marks.
+> **Budget met exactly at 20:00**, against a hard 20:00 limit. There is no
+> slack, so if a live step stalls, cut B5 first and A1 second. Never cut A7:
+> the additional-features segment carries 20 marks, more than any other
+> segment, and half of those marks depend on explaining the features aloud.
 
 ---
 

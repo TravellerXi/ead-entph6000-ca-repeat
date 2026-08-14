@@ -3,6 +3,15 @@
 #
 # The release is a Service selector change, not a pod rollout: the target slot
 # is already running and warm, so cut-over and rollback are both near-instant.
+#
+# BREAK-GLASS ONLY. Argo CD reconciles this namespace with selfHeal enabled, so
+# the switch below is reverted within seconds unless auto-sync is paused first:
+#
+#   kubectl -n argocd patch application ead-platform --type merge \
+#     -p '{"spec":{"syncPolicy":{"automated":null}}}'
+#
+# The routine path is the CD workflow, which commits activeColour to
+# values-live.yaml and lets Argo CD move the selector.
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ead-platform}"

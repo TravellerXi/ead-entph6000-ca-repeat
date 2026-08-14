@@ -39,9 +39,37 @@ jobs:
         with:
           terraform_version: 1.9.8
 
+      - name: Verify state backend secrets are present
+        # Fails with an actionable message instead of letting `init` emit an
+        # opaque backend error when the one-off bootstrap has not been run.
+        env:
+          RG: ${{ secrets.TFSTATE_RESOURCE_GROUP }}
+          SA: ${{ secrets.TFSTATE_STORAGE_ACCOUNT }}
+          CT: ${{ secrets.TFSTATE_CONTAINER }}
+        run: |
+          missing=""
+          [ -n "$RG" ] || missing="$missing TFSTATE_RESOURCE_GROUP"
+          [ -n "$SA" ] || missing="$missing TFSTATE_STORAGE_ACCOUNT"
+          [ -n "$CT" ] || missing="$missing TFSTATE_CONTAINER"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing" >&2
+            echo "Run scripts/bootstrap-state.sh once, then set them." >&2
+            exit 1
+          fi
+
       - name: Terraform init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init -input=false
+        # The backend block in providers.tf is deliberately empty so that no
+        # state location is hard-coded in the repository; it is supplied here.
+        # Without these values `init` cannot reach the remote state and the
+        # destroy-and-rebuild requirement silently breaks on ephemeral runners.
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
+            -backend-config="key=ead.tfstate" \
+            -backend-config="use_azuread_auth=true"
 
       - name: Terraform format check
         working-directory: ${{ env.TF_DIR }}
