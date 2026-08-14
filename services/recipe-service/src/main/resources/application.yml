@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: recipe-service
+  data:
+    mongodb:
+      # No credentials in source control: injected from a Kubernetes Secret at runtime.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/recipedb}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+app:
+  instance-colour: ${INSTANCE_COLOUR:blue}
+  messaging:
+    exchange: ${MESSAGING_EXCHANGE:ead.events}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Deliberately narrow. The starter project exposed "env", which leaks configuration.
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    ie.tudublin.ead: INFO
+    org.mongodb.driver: WARN

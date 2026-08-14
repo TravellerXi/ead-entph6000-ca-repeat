@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: user-service
+  data:
+    mongodb:
+      # No credentials in source control: injected from a Kubernetes Secret at runtime.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/userdb}
+
+app:
+  instance-colour: ${INSTANCE_COLOUR:blue}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    ie.tudublin.ead: INFO
+    org.mongodb.driver: WARN

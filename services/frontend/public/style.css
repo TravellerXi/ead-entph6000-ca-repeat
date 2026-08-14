@@ -1,0 +1,85 @@
+:root {
+  --bg: #0f1720;
+  --panel: #16212c;
+  --ink: #e6edf3;
+  --muted: #8b9bab;
+  --accent: #3fb950;
+  --danger: #f85149;
+  --blue: #2f81f7;
+  --green: #3fb950;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px;
+  border-bottom: 1px solid #223;
+}
+
+header h1 { font-size: 1.25rem; margin: 0; }
+
+.badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #06121f;
+  font-weight: 700;
+}
+
+.badge-blue { background: var(--blue); }
+.badge-green { background: var(--green); }
+
+nav { display: flex; gap: 18px; padding: 12px 28px; background: var(--panel); }
+nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+nav a:hover { color: var(--ink); }
+
+main { padding: 24px 28px; max-width: 960px; }
+
+h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 32px; }
+
+table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 8px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #223; font-size: 0.9rem; }
+th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+tr:last-child td { border-bottom: none; }
+
+form { display: grid; gap: 12px; max-width: 460px; margin-top: 12px; }
+label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #2b3a4a;
+  background: #0d1620;
+  color: var(--ink);
+}
+
+button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #06121f;
+  font-weight: 600;
+  cursor: pointer;
+  justify-self: start;
+}
+
+button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 4px 10px; }
+
+td form { margin: 0; }
+
+.error { color: var(--danger); }
+
+footer { padding: 24px 28px; color: var(--muted); font-size: 0.75rem; }

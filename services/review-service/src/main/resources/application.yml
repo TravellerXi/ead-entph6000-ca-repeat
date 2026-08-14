@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: review-service
+  data:
+    mongodb:
+      # No credentials in source control: injected from a Kubernetes Secret at runtime.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/reviewdb}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+
+app:
+  instance-colour: ${INSTANCE_COLOUR:blue}
+  services:
+    recipe-base-url: ${RECIPE_SERVICE_URL:http://recipe-service:8080}
+    user-base-url: ${USER_SERVICE_URL:http://user-service:8080}
+  messaging:
+    exchange: ${MESSAGING_EXCHANGE:ead.events}
+    queue: ${MESSAGING_QUEUE:review.recipe-events}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    ie.tudublin.ead: INFO
+    org.mongodb.driver: WARN

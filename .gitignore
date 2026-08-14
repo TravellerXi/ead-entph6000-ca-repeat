@@ -1,0 +1,47 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Java / Maven
+target/
+*.class
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.tfvars
+!example.tfvars
+
+# Secrets / env  (NEVER commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+kubeconfig*
+sp-credentials.json
+azure-credentials.json
+
+# Helm
+**/charts/*.tgz
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Course reference material — not part of the delivered system
+docs/course-materials/
+services/starter-backend/
+services/starter-frontend/
