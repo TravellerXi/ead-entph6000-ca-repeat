@@ -1,0 +1,87 @@
+{{- if .Values.networkPolicy.enabled }}
+{{/* Default deny: nothing may talk to anything unless a rule below allows it. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+{{/* Only the frontend may be reached from outside the namespace. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-ingress
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: {{ .Values.frontend.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: {{ .Values.frontend.port }}
+---
+{{/* Backend services accept traffic from the frontend and from review-service only. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-api-traffic
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - {{ .Values.recipeService.name }}
+          - {{ .Values.userService.name }}
+          - {{ .Values.reviewService.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: {{ .Values.frontend.name }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: {{ .Values.reviewService.name }}
+      ports:
+        - port: 8080
+---
+{{/* The data layer and broker are reachable only from application pods. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-datastore-from-services
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - database
+          - broker
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - {{ .Values.recipeService.name }}
+                  - {{ .Values.userService.name }}
+                  - {{ .Values.reviewService.name }}
+{{- end }}

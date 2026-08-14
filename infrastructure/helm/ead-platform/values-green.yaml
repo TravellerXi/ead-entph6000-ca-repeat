@@ -1,0 +1,7 @@
+# Blue/green overlay: promote the green slot.
+# Applied by scripts/switch-colour.sh or the CD workflow after smoke tests pass.
+activeColour: green
+
+reviewService:
+  blueReplicas: 2   # kept warm so rollback is a label switch, not a redeploy
+  greenReplicas: 2

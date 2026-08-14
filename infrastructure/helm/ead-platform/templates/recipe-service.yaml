@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.recipeService.name }}
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Values.recipeService.name }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.recipeService.port }}
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: {{ .Values.recipeService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.recipeService.name }}
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Values.recipeService.name }}
+  annotations:
+    kubernetes.io/change-cause: {{ printf "helm release %s image tag %s" .Release.Name .Values.global.imageTag | quote }}
+spec:
+  replicas: {{ .Values.recipeService.replicas }}
+  # Strategy 1 of 2: RollingUpdate with surge-first so capacity never dips.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ .Values.recipeService.name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ead.labels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Values.recipeService.name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.recipeService.name }}
+          image: {{ include "ead.image" (list . .Values.recipeService.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.recipeService.port }}
+          env:
+            {{- include "ead.springEnv" . | nindent 12 }}
+            - name: MONGODB_URI
+              value: {{ include "ead.mongoUri" (list . .Values.recipeService.database) | quote }}
+            - name: INSTANCE_COLOUR
+              value: {{ .Values.activeColour | quote }}
+          {{- include "ead.springProbes" . | nindent 10 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.recipeService.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "ead.tmpVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "ead.tmpVolume" . | nindent 8 }}
+---
+{{- if .Values.recipeService.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.recipeService.name }}
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.recipeService.name }}
+  minReplicas: {{ .Values.recipeService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.recipeService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.recipeService.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

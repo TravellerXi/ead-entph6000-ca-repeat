@@ -1,0 +1,7 @@
+# Blue/green overlay: blue serves traffic, green is scaled to zero.
+# This is the default steady state; values.yaml already matches it.
+activeColour: blue
+
+reviewService:
+  blueReplicas: 2
+  greenReplicas: 0

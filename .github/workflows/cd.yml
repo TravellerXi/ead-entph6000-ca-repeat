@@ -1,0 +1,150 @@
+name: CD
+
+# Continuous Delivery: promotion to AKS is deliberately gated on a manual
+# dispatch or a successful CI run on main, so the change management process
+# stays consistent and auditable.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      colour:
+        description: Blue/green slot to make active
+        required: true
+        default: blue
+        type: choice
+        options: [blue, green]
+      image_tag:
+        description: Image tag to deploy
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  NAMESPACE: ead-platform
+  CHART_PATH: infrastructure/helm/ead-platform
+
+jobs:
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: production
+      url: ${{ steps.expose.outputs.frontend_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Fetch AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group "${{ secrets.AKS_RESOURCE_GROUP }}" \
+            --name "${{ secrets.AKS_CLUSTER_NAME }}" \
+            --overwrite-existing
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Resolve target colour
+        id: target
+        run: |
+          COLOUR="${{ github.event.inputs.colour || 'blue' }}"
+          TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          echo "colour=$COLOUR" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # Stage the new colour first; the Service still points at the old one.
+      - name: Deploy inactive slot
+        run: |
+          helm upgrade --install ead "$CHART_PATH" \
+            --namespace "$NAMESPACE" --create-namespace \
+            -f "$CHART_PATH/values-${{ steps.target.outputs.colour }}.yaml" \
+            --set global.imageTag=${{ steps.target.outputs.tag }} \
+            --set global.imageRepository=${{ github.repository }} \
+            --wait --timeout 10m
+
+      - name: Smoke test the target slot before switching traffic
+        run: |
+          kubectl -n "$NAMESPACE" rollout status \
+            deployment/review-service-${{ steps.target.outputs.colour }} --timeout=5m
+          kubectl -n "$NAMESPACE" run smoke-$RANDOM --rm -i --restart=Never \
+            --image=curlimages/curl:8.10.1 -- \
+            curl -fsS "http://review-service-${{ steps.target.outputs.colour }}:8080/actuator/health/readiness"
+
+      - name: Verify rolling-update services converged
+        run: |
+          kubectl -n "$NAMESPACE" rollout status deployment/recipe-service --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deployment/user-service --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deployment/frontend --timeout=5m
+
+      - name: Expose public URLs for the report
+        id: expose
+        run: |
+          for i in $(seq 1 30); do
+            IP=$(kubectl -n "$NAMESPACE" get svc frontend \
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            [ -n "$IP" ] && break
+            sleep 10
+          done
+          echo "frontend_url=http://$IP" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deployed endpoints"
+            echo ""
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Frontend | http://$IP |"
+            echo "| Active colour | ${{ steps.target.outputs.colour }} |"
+            echo "| Image tag | ${{ steps.target.outputs.tag }} |"
+            echo "| Pipeline run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record rollout history for the demo
+        if: always()
+        run: |
+          kubectl -n "$NAMESPACE" rollout history deployment/recipe-service
+          kubectl -n "$NAMESPACE" get svc review-service \
+            -o jsonpath='{.metadata.annotations.ead\.tudublin\.ie/active-colour}'
+
+  rollback:
+    name: Rollback on failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Fetch AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group "${{ secrets.AKS_RESOURCE_GROUP }}" \
+            --name "${{ secrets.AKS_CLUSTER_NAME }}" \
+            --overwrite-existing
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      # Helm rollback restores the previous release, which for the blue/green
+      # service means the Service selector returns to the previously active slot.
+      - name: Roll back the Helm release
+        run: |
+          helm rollback ead --namespace "$NAMESPACE" --wait --timeout 5m
+          kubectl -n "$NAMESPACE" rollout status deployment/recipe-service --timeout=5m

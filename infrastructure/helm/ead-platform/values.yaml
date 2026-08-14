@@ -1,0 +1,153 @@
+# Default values for ead-platform.
+# Blue/green overlays live in values-blue.yaml and values-green.yaml.
+
+global:
+  imageRegistry: ghcr.io
+  imageRepository: travellerxi/ead-ca-repeat
+  imagePullPolicy: IfNotPresent
+  imageTag: latest
+
+# Which slot serves production traffic. The frontend Service selector follows this.
+activeColour: blue
+
+# Deployment strategy for the rolling-update services (recipe/user/frontend).
+rollingUpdate:
+  maxSurge: 1
+  maxUnavailable: 0
+
+# Pod-level security context applied to every workload.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+mongodb:
+  enabled: true
+  image: mongo:7.0
+  replicas: 1
+  port: 27017
+  storageClass: managed-csi
+  storageSize: 4Gi
+  # Credentials come from an existing Secret; never from this file.
+  existingSecret: mongodb-credentials
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+rabbitmq:
+  enabled: true
+  image: rabbitmq:3.13-management-alpine
+  port: 5672
+  managementPort: 15672
+  existingSecret: rabbitmq-credentials
+  storageSize: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+recipeService:
+  name: recipe-service
+  image: recipe-service
+  replicas: 2
+  port: 8080
+  database: recipedb
+  resources:
+    requests:
+      cpu: 100m
+      memory: 320Mi
+    limits:
+      cpu: 500m
+      memory: 640Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+userService:
+  name: user-service
+  image: user-service
+  replicas: 2
+  port: 8080
+  database: userdb
+  resources:
+    requests:
+      cpu: 100m
+      memory: 320Mi
+    limits:
+      cpu: 500m
+      memory: 640Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+reviewService:
+  name: review-service
+  image: review-service
+  # Blue/green: both slots are declared, traffic is switched by activeColour.
+  blueReplicas: 2
+  greenReplicas: 0
+  port: 8080
+  database: reviewdb
+  resources:
+    requests:
+      cpu: 100m
+      memory: 320Mi
+    limits:
+      cpu: 500m
+      memory: 640Mi
+  # KEDA scales this service on RabbitMQ queue depth, not CPU.
+  keda:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    queueName: review.recipe-events
+    queueLength: "20"
+
+frontend:
+  name: frontend
+  image: frontend
+  replicas: 2
+  port: 3000
+  serviceType: LoadBalancer
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+
+networkPolicy:
+  enabled: true
+
+probes:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3

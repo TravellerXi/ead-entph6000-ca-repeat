@@ -1,0 +1,143 @@
+{{/*
+Strategy 2 of 2: Blue/Green.
+Two full Deployments exist side by side; the Service selector is pinned to
+.Values.activeColour, so a release is a label switch rather than a pod rollout.
+Rollback is the same switch in reverse, with the previous slot still warm.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.reviewService.name }}
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Values.reviewService.name }}
+  annotations:
+    ead.tudublin.ie/active-colour: {{ .Values.activeColour | quote }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.reviewService.port }}
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: {{ .Values.reviewService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    ead.tudublin.ie/colour: {{ .Values.activeColour }}
+---
+{{/* A colour-pinned Service for each slot, so the idle slot can be smoke-tested before the switch. */}}
+{{- range $colour := list "blue" "green" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Values.reviewService.name }}-{{ $colour }}
+  labels:
+    {{- include "ead.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $.Values.reviewService.name }}
+    ead.tudublin.ie/colour: {{ $colour }}
+spec:
+  ports:
+    - name: http
+      port: {{ $.Values.reviewService.port }}
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: {{ $.Values.reviewService.name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    ead.tudublin.ie/colour: {{ $colour }}
+---
+{{- end }}
+{{- range $colour := list "blue" "green" }}
+{{- $replicas := ternary $.Values.reviewService.blueReplicas $.Values.reviewService.greenReplicas (eq $colour "blue") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Values.reviewService.name }}-{{ $colour }}
+  labels:
+    {{- include "ead.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $.Values.reviewService.name }}
+    ead.tudublin.ie/colour: {{ $colour }}
+  annotations:
+    kubernetes.io/change-cause: {{ printf "helm release %s colour %s tag %s" $.Release.Name $colour $.Values.global.imageTag | quote }}
+spec:
+  replicas: {{ $replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ $.Values.reviewService.name }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      ead.tudublin.ie/colour: {{ $colour }}
+  template:
+    metadata:
+      labels:
+        {{- include "ead.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $.Values.reviewService.name }}
+        ead.tudublin.ie/colour: {{ $colour }}
+    spec:
+      securityContext:
+        {{- toYaml $.Values.securityContext | nindent 8 }}
+      containers:
+        - name: {{ $.Values.reviewService.name }}
+          image: {{ include "ead.image" (list $ $.Values.reviewService.image) }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $.Values.reviewService.port }}
+          env:
+            {{- include "ead.springEnv" $ | nindent 12 }}
+            - name: MONGODB_URI
+              value: {{ include "ead.mongoUri" (list $ $.Values.reviewService.database) | quote }}
+            - name: RECIPE_SERVICE_URL
+              value: {{ printf "http://%s:%v" $.Values.recipeService.name $.Values.recipeService.port | quote }}
+            - name: USER_SERVICE_URL
+              value: {{ printf "http://%s:%v" $.Values.userService.name $.Values.userService.port | quote }}
+            - name: INSTANCE_COLOUR
+              value: {{ $colour | quote }}
+          {{- include "ead.springProbes" $ | nindent 10 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.reviewService.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "ead.tmpVolumeMount" $ | nindent 12 }}
+      volumes:
+        {{- include "ead.tmpVolume" $ | nindent 8 }}
+---
+{{- end }}
+{{- if $.Values.reviewService.keda.enabled }}
+{{/*
+Additional feature: KEDA scales on RabbitMQ queue depth.
+The module only covered CPU-based HorizontalPodAutoscaler; this reacts to
+backlog instead, which is the correct signal for an event consumer.
+*/}}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: rabbitmq-trigger-auth
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: {{ .Values.rabbitmq.existingSecret }}
+      key: amqpUri
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Values.reviewService.name }}-queue-scaler
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ .Values.reviewService.name }}-{{ .Values.activeColour }}
+  minReplicaCount: {{ .Values.reviewService.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.reviewService.keda.maxReplicas }}
+  pollingInterval: 15
+  cooldownPeriod: 60
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: {{ .Values.reviewService.keda.queueName }}
+        mode: QueueLength
+        value: {{ .Values.reviewService.keda.queueLength | quote }}
+      authenticationRef:
+        name: rabbitmq-trigger-auth
+{{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ead-platform
+description: Recipe platform for TU Dublin EAD CA Repeat — four services and a MongoDB data layer
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - microservices
+  - ead
+  - tudublin
+maintainers:
+  - name: Xi Yu
