@@ -20,6 +20,12 @@ variable "location" {
   default     = "northeurope"
 }
 
+variable "environment" {
+  description = "Environment discriminator used in resource names. Keeps names deterministic so destroy and CD can resolve them."
+  type        = string
+  default     = "prod"
+}
+
 variable "kubernetes_version" {
   description = "AKS control plane version. Null tracks the region default."
   type        = string
@@ -59,6 +65,12 @@ variable "gitops_repo_url" {
   description = "Repository Argo CD reconciles against."
   type        = string
   default     = ""
+}
+
+variable "gitops_revision" {
+  description = "Branch or tag Argo CD tracks."
+  type        = string
+  default     = "main"
 }
 
 variable "tags" {

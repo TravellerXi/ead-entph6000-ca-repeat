@@ -62,9 +62,12 @@ spec:
                   key: password
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
           livenessProbe:
             exec:
               command:
@@ -88,6 +91,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data/db
+            # readOnlyRootFilesystem still needs somewhere for scratch files.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
   # volumeClaimTemplates keeps the PVC alive across pod restarts and rescheduling.
   volumeClaimTemplates:
     - metadata:

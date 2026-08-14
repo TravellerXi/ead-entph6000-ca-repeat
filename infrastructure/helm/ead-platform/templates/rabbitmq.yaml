@@ -65,9 +65,12 @@ spec:
                   key: password
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
           livenessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "-q", "ping"]
@@ -85,6 +88,16 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            # RabbitMQ writes its generated config and cookie outside the volume.
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /etc/rabbitmq
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: data

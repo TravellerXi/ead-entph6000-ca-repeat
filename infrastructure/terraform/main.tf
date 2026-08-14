@@ -1,11 +1,9 @@
-resource "random_string" "suffix" {
-  length  = 5
-  special = false
-  upper   = false
-}
-
 locals {
-  name = "${var.project}-${random_string.suffix.result}"
+  # Deterministic names. A random suffix would make the resource group
+  # unpredictable, which breaks two things on ephemeral CI runners: a later
+  # `destroy` could not find what a previous `apply` created, and the CD
+  # workflow could not resolve the cluster from static configuration.
+  name = "${var.project}-${var.environment}"
 }
 
 resource "azurerm_resource_group" "this" {

@@ -1,0 +1,10 @@
+# Blue/green STAGING overlay (rollback direction).
+#
+# Brings blue back to full capacity while green continues to serve traffic, so
+# blue can be verified before the selector moves back. Mirror image of
+# values-green-staged.yaml.
+activeColour: green
+
+reviewService:
+  blueReplicas: 2
+  greenReplicas: 2

@@ -20,10 +20,18 @@ terraform {
     }
   }
 
-  # Remote state is intentionally commented out: it requires a pre-existing storage
-  # account, which would break the "destroy and rebuild from nothing" requirement.
-  # The trade-off is discussed in the Release Management Plan.
-  # backend "azurerm" {}
+  # Remote state is REQUIRED for the destroy-and-rebuild requirement to hold on
+  # ephemeral CI runners: local state would live only on the runner that ran
+  # `apply`, so a later `destroy` job would start with empty state and silently
+  # leave the cluster running. Configured at init time:
+  #   terraform init -backend-config="resource_group_name=..." \
+  #                  -backend-config="storage_account_name=..." \
+  #                  -backend-config="container_name=tfstate" \
+  #                  -backend-config="key=ead.tfstate"
+  # The backing storage account is created once by scripts/bootstrap-state.sh
+  # and is deliberately outside this configuration so that `destroy` cannot
+  # delete the state that describes what it is destroying.
+  backend "azurerm" {}
 }
 
 provider "azurerm" {

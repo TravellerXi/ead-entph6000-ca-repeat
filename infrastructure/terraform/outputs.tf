@@ -23,9 +23,14 @@ output "frontend_url_command" {
   value       = "kubectl -n ${var.namespace} get svc frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
 }
 
-output "argocd_url_command" {
-  description = "Resolves the Argo CD UI address."
-  value       = var.enable_argocd ? "kubectl -n argocd get svc argocd-server -o jsonpath='{.status.loadBalancer.ingress[0].ip}'" : "argocd disabled"
+output "argocd_access_command" {
+  description = "Argo CD is ClusterIP-only by design; reach the UI through a port-forward."
+  value       = var.enable_argocd ? "kubectl -n argocd port-forward svc/argocd-server 8080:443" : "argocd disabled"
+}
+
+output "argocd_initial_password_command" {
+  description = "Retrieves the bootstrap admin password."
+  value       = var.enable_argocd ? "kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d" : "argocd disabled"
 }
 
 output "kube_config" {

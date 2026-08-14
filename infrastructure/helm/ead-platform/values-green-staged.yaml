@@ -1,0 +1,16 @@
+# Blue/green STAGING overlay.
+#
+# Brings the green slot up to full capacity while the Service selector stays on
+# blue. This is the state in which green is smoke-tested: green pods are running
+# and individually addressable via the review-service-green Service, but no
+# production traffic reaches them.
+#
+# Promotion is a separate apply of values-green.yaml, which changes ONLY the
+# selector. Splitting these two effects is the entire point of blue/green — a
+# single overlay that both starts green and moves traffic would cut over before
+# any verification could run.
+activeColour: blue
+
+reviewService:
+  blueReplicas: 2
+  greenReplicas: 2

@@ -66,23 +66,54 @@ jobs:
           echo "colour=$COLOUR" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      # Stage the new colour first; the Service still points at the old one.
-      - name: Deploy inactive slot
+      # Phase 1: bring the target slot up to capacity WITHOUT moving the selector.
+      # values-*-staged.yaml deliberately keeps activeColour on the current slot.
+      - name: Stage target slot (no traffic)
         run: |
           helm upgrade --install ead "$CHART_PATH" \
             --namespace "$NAMESPACE" --create-namespace \
-            -f "$CHART_PATH/values-${{ steps.target.outputs.colour }}.yaml" \
+            -f "$CHART_PATH/values-${{ steps.target.outputs.colour }}-staged.yaml" \
             --set global.imageTag=${{ steps.target.outputs.tag }} \
             --set global.imageRepository=${{ github.repository }} \
             --wait --timeout 10m
 
-      - name: Smoke test the target slot before switching traffic
+      - name: Smoke test the staged slot while it is still receiving no traffic
         run: |
           kubectl -n "$NAMESPACE" rollout status \
             deployment/review-service-${{ steps.target.outputs.colour }} --timeout=5m
-          kubectl -n "$NAMESPACE" run smoke-$RANDOM --rm -i --restart=Never \
+
+          # Addressed through the colour-pinned Service, not the production one.
+          kubectl -n "$NAMESPACE" run "smoke-$RANDOM" --rm -i --restart=Never \
             --image=curlimages/curl:8.10.1 -- \
-            curl -fsS "http://review-service-${{ steps.target.outputs.colour }}:8080/actuator/health/readiness"
+            curl -fsS --max-time 10 \
+              "http://review-service-${{ steps.target.outputs.colour }}:8080/actuator/health/readiness"
+
+          kubectl -n "$NAMESPACE" run "smoke-api-$RANDOM" --rm -i --restart=Never \
+            --image=curlimages/curl:8.10.1 -- \
+            curl -fsS --max-time 10 \
+              "http://review-service-${{ steps.target.outputs.colour }}:8080/api/reviews/_meta"
+
+      - name: Confirm production traffic is still on the previous slot
+        run: |
+          CURRENT=$(kubectl -n "$NAMESPACE" get svc review-service \
+            -o jsonpath='{.metadata.annotations.ead\.tudublin\.ie/active-colour}')
+          echo "selector still points at: $CURRENT"
+          if [ "$CURRENT" = "${{ steps.target.outputs.colour }}" ]; then
+            echo "::error::selector moved before the smoke test — staging overlay is wrong"
+            exit 1
+          fi
+
+      # Phase 2: promotion. This apply changes the selector and nothing else.
+      - name: Promote — switch traffic to the verified slot
+        run: |
+          helm upgrade ead "$CHART_PATH" \
+            --namespace "$NAMESPACE" --reuse-values \
+            -f "$CHART_PATH/values-${{ steps.target.outputs.colour }}.yaml" \
+            --wait --timeout 5m
+
+          kubectl -n "$NAMESPACE" get svc review-service \
+            -o jsonpath='{.metadata.annotations.ead\.tudublin\.ie/active-colour}{"\n"}'
+          kubectl -n "$NAMESPACE" get endpoints review-service
 
       - name: Verify rolling-update services converged
         run: |
