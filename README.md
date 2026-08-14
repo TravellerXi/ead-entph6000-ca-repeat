@@ -1,56 +1,127 @@
-# EAD CA Repeat 项目 — Enterprise Architecture Deployment
+# EAD CA Repeat — Enterprise Microservice CI/CD Deployment
 
-TU Dublin M.Sc. in DevOps — Enterprise Architecture Deployment (Part-Time) 模块的 CA Repeat（重修作业）工作区。
+TU Dublin M.Sc. in DevOps — **Enterprise Architecture Deployment (ENTP H6000)**, CA Repeat (PT).
+A four-service recipe platform delivered to Azure Kubernetes Service through a fully automated pipeline.
 
-- **课程**: Enterprise Architecture Deployment (ENTP H6000), course_id=452413 (Brightspace)
-- **讲师**: Dr Omar Portillo
-- **作业**: CA Repeat (PT)，合并替代原 CA1(30%) + CA2(70%)，满分 100
-- **截止日期**: 2026-08-23 22:59 (UTC)
-- **当前状态**: 调研/规划阶段，尚未开始编码
+## Architecture
 
-## 目录结构
-
-```
-EAD-CA-Repeat/
-├── README.md                        本文件
-├── CHECKLIST.md                     按评分标准整理的可勾选任务清单
-├── docs/
-│   ├── 00-course-overview.md        课程13周内容通读总结（技术栈地图）
-│   ├── 01-ca-repeat-requirements.md CA Repeat 完整要求 + 评分标准 + 报告大纲（文字整理版）
-│   ├── 02-implementation-plan.md    架构设计 + 技术选型 + 10天执行计划
-│   ├── 03-ai-collaboration-log.md   AI协作记录 + Prompt日志（供报告GenAI附录参考）
-│   └── course-materials/            从 Brightspace 下载的官方原始文件
-│       ├── CA-Repeat-Instructions.pdf
-│       ├── CA-Repeat-MarkingScheme.pdf
-│       ├── CA-Repeat-ReportOverview.pdf
-│       ├── EAD_BE_CA-Repeat.zip     官方后端起始代码（原始压缩包）
-│       └── EAD_FE_CA-Repeat.zip     官方前端起始代码（原始压缩包）
-├── services/
-│   ├── starter-backend/             已解压：官方 Spring Boot 后端起始代码（Recipe CRUD, port 8080）
-│   ├── starter-frontend/            已解压：官方 Node.js 前端起始代码（port 22137）
-│   ├── frontend/                    TODO: 最终前端服务（可基于 starter-frontend 扩展）
-│   ├── recipe-service/              TODO: Recipe 微服务（拆分自 starter-backend）
-│   ├── user-service/                TODO: 新增 User/Auth 微服务
-│   └── review-service/              TODO: 新增 Review 微服务
-├── infrastructure/
-│   ├── helm/                        TODO: Helm charts（K8s 部署模板）
-│   └── terraform/                   TODO: Terraform IaC 脚本
-└── .github/workflows/               TODO: CI/CD 流水线定义
+```mermaid
+graph LR
+  U((User)) --> FE[frontend<br/>Node.js · LoadBalancer]
+  FE --> RC[recipe-service<br/>Spring Boot]
+  FE --> US[user-service<br/>Spring Boot]
+  FE --> RV[review-service<br/>Spring Boot]
+  RV -.->|GET /exists| RC
+  RV -.->|GET /exists| US
+  RC -->|publish recipe.*| MQ{{RabbitMQ}}
+  MQ -->|consume recipe.#| RV
+  RC --> DB[(MongoDB<br/>StatefulSet + PVC)]
+  US --> DB
+  RV --> DB
 ```
 
-## 快速开始
+| Service | Stack | Entity | Notes |
+|---|---|---|---|
+| `frontend` | Node.js 20 / Express | — | Only externally exposed workload |
+| `recipe-service` | Java 17 / Spring Boot | Recipe | Publishes lifecycle events |
+| `user-service` | Java 17 / Spring Boot | User | BCrypt credential handling |
+| `review-service` | Java 17 / Spring Boot | Review | References Recipe + User; blue/green slot |
 
-1. 阅读 [docs/00-course-overview.md](docs/00-course-overview.md) 了解课程都教了什么技术。
-2. 阅读 [docs/01-ca-repeat-requirements.md](docs/01-ca-repeat-requirements.md) 明确必须交付什么、怎么评分。
-3. 阅读 [docs/02-implementation-plan.md](docs/02-implementation-plan.md) 看具体架构方案和10天计划。
-4. 用 [CHECKLIST.md](CHECKLIST.md) 跟踪进度。
-5. 起始代码在 `services/starter-backend` 和 `services/starter-frontend`，在此基础上拆分/扩展为4个微服务。
-6. 每次请 AI 协助后，记得把 prompt 追加到 [docs/03-ai-collaboration-log.md](docs/03-ai-collaboration-log.md)，方便写报告 GenAI 附录时直接引用。
+**Four services, one data layer, three entities** — satisfying the brief's minimum of four services and two entities.
 
-## 关键提醒
+## Repository layout
 
-- ⚠️ Brightspace dropbox 说明要求：报告中**必须列出各 Service 的 URL 和 CI/CD pipeline 的 URL** —— 因此服务需部署到可访问的云端（AKS），纯本地 Minikube 不满足。
-- ⚠️ CA Repeat 明确要求**两种不同的部署策略**（CA2 原来只要求一种）。
-- ⚠️ 报告中必须**披露 GenAI 使用情况并附上所有 prompt**（TU Dublin 允许 Level 3 AI-Assisted Editing）。
-- ⚠️ 录制完演示视频后，如果用了云服务（如 Azure AKS），记得**立刻销毁资源**避免产生费用。
-- ⚠️ 讲师可能在9月初要求视频通话答辩，解释提交的内容。
+```
+services/            four microservices, each with Dockerfile and tests
+infrastructure/
+  helm/ead-platform/ chart rendering 24 Kubernetes objects
+  terraform/         azurerm provisions the AKS cluster itself
+.github/workflows/   ci.yml · cd.yml · infrastructure.yml
+scripts/             rollback, blue/green switch, backup and restore
+docs/demo-script.md  segment-by-segment recording script (<=20 min)
+```
+
+## Deployment strategies
+
+Two strategies, matched to risk profile:
+
+| Strategy | Applied to | Rollback |
+|---|---|---|
+| **RollingUpdate** (`maxUnavailable: 0`) | recipe, user, frontend | `kubectl rollout undo` |
+| **Blue/Green** (Service selector pinned to `activeColour`) | review-service | Selector switch — the previous slot never stopped running |
+
+```bash
+./scripts/switch-colour.sh green    # promote, after smoke-testing the idle slot
+./scripts/rollback.sh bluegreen     # revert
+./scripts/rollback.sh rolling recipe-service
+./scripts/rollback.sh helm
+```
+
+## Additional features (not taught in the module)
+
+| Technology | Role |
+|---|---|
+| **Argo CD** | GitOps reconciliation with `selfHeal` drift correction |
+| **RabbitMQ** | Asynchronous inter-service messaging via topic exchange |
+| **KEDA** | Autoscaling on queue depth rather than CPU |
+
+Verified against every lecture, lab and demo script in Weeks 1–11 plus the Week 2 guest material. Prometheus, Grafana, Istio and Trivy were checked and **rejected** as additional features because the module covers them.
+
+## Quick start
+
+```bash
+# 1. Provision infrastructure (creates the AKS cluster from nothing)
+cd infrastructure/terraform
+cp example.tfvars terraform.tfvars     # then edit
+terraform init && terraform apply
+
+# 2. Connect kubectl
+az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing
+
+# 3. Deploy the platform
+helm upgrade --install ead ../helm/ead-platform \
+  --namespace ead-platform --create-namespace \
+  -f ../helm/ead-platform/values-blue.yaml --wait
+
+# 4. Resolve the public URL
+kubectl -n ead-platform get svc frontend \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+# 5. Tear everything down (no lingering cost)
+terraform destroy
+```
+
+## Local verification (no cluster required)
+
+```bash
+cd services/recipe-service && mvn test     # 6 tests
+cd services/user-service   && mvn test     # 7 tests
+cd services/review-service && mvn test     # 6 tests
+cd services/frontend       && npm test     # 10 tests
+
+helm lint infrastructure/helm/ead-platform
+helm template ead infrastructure/helm/ead-platform
+terraform -chdir=infrastructure/terraform validate
+```
+
+## Backup and restore
+
+```bash
+./scripts/backup-mongodb.sh                                       # mongodump inside the pod
+./scripts/restore-mongodb.sh backups/mongodb-<stamp>.archive.gz   # idempotent (--drop)
+```
+
+## Security posture
+
+- Non-root UID 10001, `readOnlyRootFilesystem`, all capabilities dropped, `RuntimeDefault` seccomp
+- Pod Security Admission: `enforce=baseline`, `audit=restricted`
+- NetworkPolicy default-deny; only the frontend is externally reachable
+- Secrets generated by Terraform `random_password`; no credential in source control
+- Trivy gates the build on unfixed CRITICAL findings; SARIF published to code scanning
+
+Three defects in the supplied starter project were found and fixed: MongoDB credentials hard-coded in two places, and `actuator` exposing the `env` endpoint, which served the entire configuration — including those credentials — over HTTP.
+
+## Deliverables
+
+- Release Management Plan report (~2,300 words, Harvard referencing) → exported to PDF
+- Demonstration video — script at [docs/demo-script.md](docs/demo-script.md)
