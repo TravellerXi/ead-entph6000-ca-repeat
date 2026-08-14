@@ -1,0 +1,22 @@
+# Normalise line endings so scripts and manifests behave identically on
+# Windows workstations and Linux runners.
+* text=auto eol=lf
+
+# Shell scripts and Kubernetes manifests break outright with CRLF.
+*.sh text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.tf text eol=lf
+Dockerfile text eol=lf
+
+# Windows-only helpers keep CRLF.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets must never be normalised.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.jar binary
