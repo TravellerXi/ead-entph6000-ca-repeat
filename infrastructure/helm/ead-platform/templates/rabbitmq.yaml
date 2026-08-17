@@ -46,7 +46,7 @@ spec:
       containers:
         - name: rabbitmq
           image: {{ .Values.rabbitmq.image }}
-          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.rabbitmq.pullPolicy }}
           ports:
             - name: amqp
               containerPort: {{ .Values.rabbitmq.port }}

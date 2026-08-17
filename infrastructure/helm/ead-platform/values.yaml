@@ -4,6 +4,8 @@
 global:
   imageRegistry: ghcr.io
   imageRepository: travellerxi/ead-ca-repeat
+  # Governs only the four images this pipeline builds. CI sets it to Never so kind
+  # uses the locally loaded images; upstream images below must not inherit that.
   imagePullPolicy: IfNotPresent
   imageTag: latest
 
@@ -34,6 +36,8 @@ containerSecurityContext:
 mongodb:
   enabled: true
   image: mongo:7.0
+  # Upstream image, never built by this pipeline, so it keeps its own policy.
+  pullPolicy: IfNotPresent
   replicas: 1
   port: 27017
   storageClass: managed-csi
@@ -51,6 +55,8 @@ mongodb:
 rabbitmq:
   enabled: true
   image: rabbitmq:3.13-management-alpine
+  # Upstream image, never built by this pipeline, so it keeps its own policy.
+  pullPolicy: IfNotPresent
   port: 5672
   managementPort: 15672
   existingSecret: rabbitmq-credentials

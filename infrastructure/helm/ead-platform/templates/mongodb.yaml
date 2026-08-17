@@ -45,7 +45,7 @@ spec:
       containers:
         - name: mongodb
           image: {{ .Values.mongodb.image }}
-          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.mongodb.pullPolicy }}
           ports:
             - name: mongo
               containerPort: {{ .Values.mongodb.port }}
