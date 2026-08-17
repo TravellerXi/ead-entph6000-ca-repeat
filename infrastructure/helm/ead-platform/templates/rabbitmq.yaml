@@ -53,6 +53,13 @@ spec:
             - name: management
               containerPort: {{ .Values.rabbitmq.managementPort }}
           env:
+            # "-" sends the broker log to stdout. Without it RabbitMQ opens
+            # /var/log/rabbitmq/<node>.log, which the read-only root filesystem
+            # refuses, and the broker aborts with cannot_log_to_file/erofs.
+            # stdout is also what the logging design assumes: the node agent
+            # collects container output, not files inside the container.
+            - name: RABBITMQ_LOGS
+              value: "-"
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
