@@ -288,3 +288,15 @@ jobs:
           kubectl -n ead-platform get all
           kubectl -n ead-platform describe pods
           kubectl -n ead-platform logs -l app.kubernetes.io/part-of=ead-platform --tail=100 --all-containers || true
+
+          # A container stuck in CrashLoopBackOff has no current log, so the loop
+          # above returns nothing for exactly the pod that failed. Ask for the
+          # previous instance of every non-ready pod as well.
+          echo "=== previous logs for pods that are not ready ==="
+          for pod in $(kubectl -n ead-platform get pods \
+              -o jsonpath='{range .items[?(@.status.containerStatuses[0].ready==false)]}{.metadata.name}{"\n"}{end}'); do
+            echo "--- $pod (previous) ---"
+            kubectl -n ead-platform logs "$pod" --previous --tail=120 --all-containers || true
+            echo "--- $pod (current) ---"
+            kubectl -n ead-platform logs "$pod" --tail=120 --all-containers || true
+          done
