@@ -1,11 +1,11 @@
 # ---- Dependency stage ----
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /build
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev || npm install --omit=dev
 
 # ---- Runtime stage ----
-FROM node:20-alpine
+FROM node:22-alpine
 RUN addgroup -S app && adduser -S -G app -u 10001 app
 WORKDIR /app
 COPY --from=deps --chown=app:app /build/node_modules ./node_modules
