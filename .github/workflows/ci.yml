@@ -159,7 +159,7 @@ jobs:
 
       # Vulnerability check on images, as required by the assignment brief.
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.service }}:scan
           format: sarif
@@ -175,7 +175,7 @@ jobs:
           category: trivy-${{ matrix.service }}
 
       - name: Fail the build on unfixed CRITICAL findings
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.service }}:scan
           format: table
