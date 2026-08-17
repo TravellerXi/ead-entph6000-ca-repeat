@@ -254,24 +254,44 @@ jobs:
 
       - name: Exercise the running application over HTTP
         run: |
+          # Drive the app the way a user does: through the frontend, which the
+          # NetworkPolicy makes the only reachable entry point. Probing the
+          # backends directly from an ad-hoc pod is denied by design.
           run_curl() {
             kubectl -n ead-platform run "probe-$RANDOM" --rm -i --restart=Never \
               --image=curlimages/curl:8.10.1 -- "$@"
           }
 
-          run_curl curl -fsS --max-time 10 http://recipe-service:8080/actuator/health/readiness
-          run_curl curl -fsS --max-time 10 http://user-service:8080/actuator/health/readiness
-          run_curl curl -fsS --max-time 10 http://review-service:8080/actuator/health/readiness
+          echo "--- frontend liveness and readiness ---"
           run_curl curl -fsS --max-time 10 http://frontend:80/healthz
+          run_curl curl -fsS --max-time 15 http://frontend:80/readyz
 
-          echo "--- create a recipe end to end ---"
-          run_curl curl -fsS --max-time 15 -X POST http://recipe-service:8080/api/recipes \
-            -H 'Content-Type: application/json' \
-            -d '{"name":"ci-smoke","ingredients":["a","b"],"prepTimeInMinutes":5}'
+          echo "--- create a recipe through the frontend ---"
+          run_curl curl -fsS --max-time 20 -X POST http://frontend:80/recipes \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -d 'name=ci-smoke&ingredients=a,b&prepTimeInMinutes=5'
 
-          echo "--- and read it back ---"
-          run_curl curl -fsS --max-time 10 http://recipe-service:8080/api/recipes \
-            | grep -q ci-smoke && echo "round trip through MongoDB confirmed"
+          echo "--- and read it back off the listing page ---"
+          run_curl curl -fsS --max-time 15 http://frontend:80/ \
+            | grep -q ci-smoke && echo "round trip frontend -> recipe-service -> MongoDB confirmed"
+
+      - name: Prove the NetworkPolicy actually blocks unauthorised pods
+        run: |
+          # An unlabelled pod must not reach a backend directly. curl exits 28 on
+          # timeout when the policy drops the packets; a success here would mean
+          # the default-deny policy is not being enforced.
+          set +e
+          kubectl -n ead-platform run "denied-$RANDOM" --rm -i --restart=Never \
+            --image=curlimages/curl:8.10.1 -- \
+            curl -sS --max-time 12 http://recipe-service:8080/actuator/health/readiness
+          rc=$?
+          set -e
+          echo "unauthorised probe exit code: $rc"
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::an unlabelled pod reached recipe-service; NetworkPolicy is not enforced"
+            exit 1
+          fi
+          echo "backend correctly unreachable from an unauthorised pod"
 
       - name: Verify persistence and network policy objects
         run: |
