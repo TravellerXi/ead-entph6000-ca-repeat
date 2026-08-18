@@ -74,12 +74,20 @@ resource "helm_release" "argocd_apps" {
           server    = "https://kubernetes.default.svc"
           namespace = var.namespace
         }
+        # Every Deployment in this chart is controlled by an HPA or KEDA.
+        # Replica count therefore belongs to the autoscaler; Argo continues to
+        # reconcile every other field and still evaluates workload health.
+        ignoreDifferences = [{
+          group        = "apps"
+          kind         = "Deployment"
+          jsonPointers = ["/spec/replicas"]
+        }]
         syncPolicy = {
           automated = {
             prune    = true
             selfHeal = true
           }
-          syncOptions = ["CreateNamespace=false"]
+          syncOptions = ["CreateNamespace=false", "RespectIgnoreDifferences=true"]
         }
       }
     }
