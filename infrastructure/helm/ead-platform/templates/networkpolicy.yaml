@@ -84,4 +84,31 @@ spec:
                   - {{ .Values.recipeService.name }}
                   - {{ .Values.userService.name }}
                   - {{ .Values.reviewService.name }}
+{{- if .Values.reviewService.keda.enabled }}
+---
+{{/* KEDA runs in kube-system and must read RabbitMQ queue depth over AMQP. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rabbitmq-from-keda
+  labels:
+    {{- include "ead.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: broker
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: keda-operator
+      ports:
+        - protocol: TCP
+          port: {{ .Values.rabbitmq.port }}
+{{- end }}
 {{- end }}
