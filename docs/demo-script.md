@@ -19,7 +19,7 @@
 
 ---
 
-## Part A — Pipeline and project setup (11:30)
+## Part A — Pipeline and project setup (12:30)
 
 ### A1 · Architecture orientation — 1:30
 Show `README.md` architecture diagram.
@@ -53,16 +53,15 @@ Open `infrastructure/terraform/main.tf`.
 
 Point at: `sku_tier = "Free"`, `identity { SystemAssigned }`, `workload_autoscaler_profile { keda_enabled }`, PSA labels in `kubernetes.tf`, `random_password` secrets.
 
-Show `infrastructure.yml` with its `plan`/`apply`/`destroy` choice behind a protected environment.
+Show `infrastructure.yml`: read-only `plan`/`plan-destroy`, plus protected `apply`/`destroy`.
 
-### A5 · Deployment strategy 1 — RollingUpdate + rollback — 1:30
+### A5 · Deployment strategy 1 — RollingUpdate evidence — 1:00
 ```
 kubectl -n ead-platform get deploy recipe-service -o jsonpath='{.spec.strategy}'
 kubectl -n ead-platform rollout history deployment/recipe-service
-./scripts/rollback.sh rolling recipe-service
 ```
 
-> "maxUnavailable is zero, so capacity never dips during a release. Rollback is ReplicaSet history — about thirty seconds."
+> "maxUnavailable is zero, so capacity never dips. ReplicaSet history supports break-glass undo after pausing Argo; routine durable rollback reverts Git."
 
 ### A6 · Deployment strategy 2 — Blue/Green + instant rollback — 2:00
 Show the frontend badge (currently **green**) and CD run `32167692249`.
@@ -110,14 +109,14 @@ kubectl -n ead-platform get scaledobject,hpa
 
 ---
 
-## Part B — Release Management Plan highlights (7:00)
+## Part B — Release Management Plan highlights (5:00)
 
 Slides, not a document read-through.
 
-### B1 · Orchestration and delivery choices — 1:30
+### B1 · Orchestration and delivery choices — 1:00
 AKS on Free tier; GitHub Actions; **continuous delivery, not deployment** — approval gate makes promotion auditable.
 
-### B2 · The release plan itself — 2:00
+### B2 · The release plan itself — 1:30
 Change process end to end: branch → PR → CI → review → merge → publish → approval → deploy → Argo CD holds state.
 
 Three rollback tiers table. Emphasise blue/green is fastest *because the previous version never stopped running*.
@@ -129,13 +128,13 @@ Three rollback tiers table. Emphasise blue/green is fastest *because the previou
 ```
 > "`mongodump` runs inside the pod, so no database port is exposed. Restore uses `--drop`, so replaying the same archive twice yields the same state — that idempotence is what makes recovery drills safe to rehearse."
 
-### B4 · Security — 1:30
+### B4 · Security — 1:00
 Four layers: cloud (managed identity, RBAC, PSA) · pipeline (least-privilege tokens, Trivy gate) · container (non-root, read-only rootfs, dropped capabilities) · data (Secrets, BCrypt, NetworkPolicy default-deny).
 
 Then the starter-code findings:
 > "Three real defects in the supplied project: credentials hard-coded twice, and `actuator` exposing `env`, which serves the entire configuration — including those credentials — over HTTP. I found these by reading the code, and fixed all three."
 
-### B5 · Sustainability and honest gaps — 1:00
+### B5 · Sustainability and honest gaps — 0:30
 Ten pods on two nodes; requests and limits everywhere; KEDA scales the consumer
 down when idle; `terraform destroy` removes cluster compute between demonstrations,
 leaving only the small remote-state store and registry artefacts.
@@ -161,18 +160,18 @@ Show the URLs on screen (frontend, Argo CD, CI, CD).
 | A2 Pipeline structure | 1:30 | 3:00 |
 | A3 CI run | 2:00 | 5:00 |
 | A4 IaC | 1:30 | 6:30 |
-| A5 RollingUpdate | 1:30 | 8:00 |
-| A6 Blue/Green | 2:00 | 10:00 |
-| A7 Additional features | 3:00 | 13:00 |
-| B1 Choices | 1:30 | 14:30 |
-| B2 Release plan | 2:00 | 16:30 |
-| B3 Backup | 1:00 | 17:30 |
-| B4 Security | 1:00 | 18:30 |
-| B5 Sustainability | 1:00 | 19:30 |
-| Close | 0:30 | **20:00** |
+| A5 RollingUpdate | 1:00 | 7:30 |
+| A6 Blue/Green | 2:00 | 9:30 |
+| A7 Additional features | 3:00 | 12:30 |
+| B1 Choices | 1:00 | 13:30 |
+| B2 Release plan | 1:30 | 15:00 |
+| B3 Backup | 1:00 | 16:00 |
+| B4 Security | 1:00 | 17:00 |
+| B5 Sustainability | 0:30 | 17:30 |
+| Close | 0:30 | **18:00** |
 
-> **Budget met exactly at 20:00**, against a hard 20:00 limit. There is no
-> slack, so if a live step stalls, cut B5 first and A1 second. Never cut A7:
+> **Budget: 18:00**, leaving two minutes below the hard limit. If a live step
+> stalls, skip B5 rather than consuming that safety margin. Never cut A7:
 > the additional-features segment carries 20 marks, more than any other
 > segment, and half of those marks depend on explaining the features aloud.
 

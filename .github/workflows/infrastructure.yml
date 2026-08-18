@@ -10,7 +10,7 @@ on:
         required: true
         default: plan
         type: choice
-        options: [plan, apply, destroy]
+        options: [plan, plan-destroy, apply, destroy]
 
 permissions:
   contents: read
@@ -32,9 +32,8 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     environment:
-      # apply/destroy require a reviewer, so infrastructure change stays a
-      # deliberate, auditable step rather than an accident.
-      name: ${{ github.event.inputs.action == 'plan' && 'infrastructure-readonly' || 'infrastructure' }}
+      # Mutating actions require a reviewer; both plan modes are read-only.
+      name: ${{ (github.event.inputs.action == 'plan' || github.event.inputs.action == 'plan-destroy') && 'infrastructure-readonly' || 'infrastructure' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -88,18 +87,22 @@ jobs:
         run: terraform validate
 
       - name: Terraform plan
-        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'plan-destroy' || github.event.inputs.action == 'apply'
         working-directory: ${{ env.TF_DIR }}
         env:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          terraform plan -input=false \
+          destroy_flag=""
+          if [ "${{ github.event.inputs.action }}" = "plan-destroy" ]; then
+            destroy_flag="-destroy"
+          fi
+          terraform plan $destroy_flag -input=false \
             -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
             -var="gitops_repo_url=${{ github.server_url }}/${{ github.repository }}.git" \
             -out=tfplan
           terraform show -no-color tfplan > plan.txt
           {
-            echo "### Terraform plan"
+            echo "### Terraform ${{ github.event.inputs.action }}"
             echo '```'
             head -c 60000 plan.txt
             echo '```'
