@@ -83,15 +83,33 @@ jobs:
         # Git is the source of truth, so the currently active slot is read from
         # the committed desired state rather than from the cluster.
         run: |
-          COLOUR="${{ github.event.inputs.colour || 'blue' }}"
-          TAG="${{ github.event.inputs.image_tag || 'latest' }}"
           if [ -f "$LIVE_VALUES" ]; then
             CURRENT=$(grep -E '^activeColour:' "$LIVE_VALUES" | awk '{print $2}')
+            BLUE_TAG=$(grep -E '^[[:space:]]+blue:' "$LIVE_VALUES" | tail -1 | awk '{gsub(/"/, "", $2); print $2}')
+            GREEN_TAG=$(grep -E '^[[:space:]]+green:' "$LIVE_VALUES" | tail -1 | awk '{gsub(/"/, "", $2); print $2}')
           fi
           CURRENT="${CURRENT:-blue}"
+          BLUE_TAG="${BLUE_TAG:-latest}"
+          GREEN_TAG="${GREEN_TAG:-latest}"
+
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            TAG="sha-${{ github.event.workflow_run.head_sha }}"
+            [ "$CURRENT" = "blue" ] && COLOUR=green || COLOUR=blue
+          else
+            COLOUR="${{ github.event.inputs.colour }}"
+            TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+            if [ "$COLOUR" = "$CURRENT" ]; then
+              echo "::error::target colour '$COLOUR' is already active; choose the inactive slot"
+              exit 1
+            fi
+          fi
+
+          if [ "$COLOUR" = "blue" ]; then BLUE_TAG="$TAG"; else GREEN_TAG="$TAG"; fi
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "colour=$COLOUR"  >> "$GITHUB_OUTPUT"
           echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+          echo "blue_tag=$BLUE_TAG"   >> "$GITHUB_OUTPUT"
+          echo "green_tag=$GREEN_TAG" >> "$GITHUB_OUTPUT"
           echo "active slot is '$CURRENT'; target slot is '$COLOUR'"
 
       # Phase 1: bring the target slot up to capacity WITHOUT moving the selector.
@@ -112,6 +130,9 @@ jobs:
             imageTag: "${{ steps.target.outputs.tag }}"
 
           reviewService:
+            imageTags:
+              blue: "${{ steps.target.outputs.blue_tag }}"
+              green: "${{ steps.target.outputs.green_tag }}"
             blueReplicas: 2
             greenReplicas: 2
           EOF

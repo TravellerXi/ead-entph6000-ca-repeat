@@ -46,6 +46,7 @@ spec:
 {{- end }}
 {{- range $colour := list "blue" "green" }}
 {{- $replicas := ternary $.Values.reviewService.blueReplicas $.Values.reviewService.greenReplicas (eq $colour "blue") }}
+{{- $tag := default $.Values.global.imageTag (index $.Values.reviewService.imageTags $colour) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -55,7 +56,7 @@ metadata:
     app.kubernetes.io/component: {{ $.Values.reviewService.name }}
     ead.tudublin.ie/colour: {{ $colour }}
   annotations:
-    kubernetes.io/change-cause: {{ printf "helm release %s colour %s tag %s" $.Release.Name $colour $.Values.global.imageTag | quote }}
+    kubernetes.io/change-cause: {{ printf "helm release %s colour %s tag %s" $.Release.Name $colour $tag | quote }}
 spec:
   replicas: {{ $replicas }}
   selector:
@@ -74,7 +75,7 @@ spec:
         {{- toYaml $.Values.securityContext | nindent 8 }}
       containers:
         - name: {{ $.Values.reviewService.name }}
-          image: {{ include "ead.image" (list $ $.Values.reviewService.image) }}
+          image: {{ printf "%s/%s/%s:%s" $.Values.global.imageRegistry $.Values.global.imageRepository $.Values.reviewService.image $tag }}
           imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
           ports:
             - name: http

@@ -1,57 +1,62 @@
-# CA Repeat 任务清单
+# CA Repeat Delivery Checklist
 
-> 截止日期：**2026-08-23 22:59 (UTC)**。今天：2026-08-13。详细方案见 [docs/02-implementation-plan.md](docs/02-implementation-plan.md)。
+> Due: **23 August 2026, 22:59 UTC**. Updated 18 August after real CI and
+> Terraform-plan execution. A checked item has executable evidence, not only code.
 
-## 架构 & 代码（对应 40分 CI/CD + 4分持久层）
+## Architecture and Code
 
-- [ ] 拆分/新建 4 个服务：frontend、recipe-service、user-service、review-service
-- [ ] 确认涉及 ≥2 个不同实体（Recipe / User / Review）
-- [ ] 每个服务编写 Dockerfile 并本地构建通过
-- [ ] MongoDB StatefulSet + PVC + Headless Service 部署（持久层）
-- [ ] 服务间通信打通（review-service 引用 recipe_id / user_id）
+- [x] Four services: frontend, recipe-service, user-service, review-service
+- [x] Three entities: Recipe, User, Review
+- [x] Four non-root multi-stage container images
+- [x] MongoDB StatefulSet, headless Service and bound PVC in the kind smoke test
+- [x] Synchronous reference validation and asynchronous recipe lifecycle events
+- [x] 29 tests passing (6 recipe, 7 user, 6 review, 10 frontend)
 
-## CI/CD 流水线（40分）
+## CI, CD and Infrastructure
 
-- [ ] CI：GitHub Actions 完成 build + test（10分）
-- [ ] 镜像安全扫描接入流水线（Trivy 或 Docker Scout）
-- [ ] CD：自动部署到 Minikube/AKS（Helm 或 kubectl apply）
-- [ ] 部署策略 1：RollingUpdate 演示 + 回滚（`kubectl rollout undo`）
-- [ ] 部署策略 2：Blue/Green 演示 + 流量切换
-- [ ] 监控：Liveness/Readiness 探针 + HPA
-- [ ] 安全：SecurityContext（非root/只读文件系统）+ Secrets + Namespace隔离
-- [ ] Infrastructure as Code：Terraform 脚本可 `apply`/`destroy` 完整重建（10分，重点投入）
+- [x] Matrix test/build workflow
+- [x] Trivy SARIF upload and hard gate on fixed CRITICAL findings
+- [x] Four public GHCR images; anonymous manifest access verified
+- [x] Helm lint, blue/green render and kubeval schema validation
+- [x] Terraform fmt/validate and Azure remote-state plan
+- [x] End-to-end kind deployment through the frontend to MongoDB
+- [x] Negative NetworkPolicy test: an unlabelled pod cannot reach a backend
+- [x] RollingUpdate implementation and rollback path
+- [x] Blue/green staged smoke test, promotion and Git-revert rollback path
+- [x] Liveness/readiness probes, CPU HPAs and KEDA queue-depth scaling
+- [x] Non-root/read-only security contexts, generated Secrets, PSA and default deny
+- [x] Argo CD reconciles a dedicated `deploy` branch; `main` remains protected
+- [x] Terraform plan: 10 add, 0 change, 0 destroy (apply/destroy skipped in plan run)
+- [ ] Successful live AKS apply and Argo CD reconciliation (in progress)
+- [ ] Successful live destroy after recording
 
-## 附加功能（20分，至少3个模块未教过的技术）
+## Additional Features (20 marks)
 
-- [ ] 附加功能1：______________________（建议 ArgoCD）
-- [ ] 附加功能2：______________________（建议 Prometheus + Grafana）
-- [ ] 附加功能3：______________________（建议 RabbitMQ/Kafka）
+Verified against 37 text sources and 73,383 words of lecture transcript/audio.
+Prometheus/Grafana, Istio, Trivy and the deployment strategies are taught and are
+therefore **not** claimed as additional features.
 
-## 报告（30分，~2000字）
+- [x] Argo CD GitOps
+- [x] RabbitMQ event-driven messaging
+- [x] KEDA event-driven autoscaling
+- [ ] Explain all three clearly in the demonstration video
 
-- [ ] **报告中列出所有 Service 的可访问 URL**（Brightspace dropbox 硬性要求）
-- [ ] **报告中列出 CI/CD Pipeline 的 URL**（GitHub Actions 运行页面）
-- [ ] 按官方 ReportOverview 要求的格式排版（可读性也计分）
-- [ ] 微服务应用总览（架构图、数据层设计）
-- [ ] 容器编排API选型与评估
-- [ ] 持续软件交付（CI/CD工具、仓库/流水线策略）
-- [ ] 部署策略详述 + 回滚 + 备份恢复 + 伸缩策略
-- [ ] 自动化基础设施交付
-- [ ] 持续配置管理计划
-- [ ] 监控与日志策略
-- [ ] 安全（云/流水线/容器/数据四个维度）
-- [ ] 可持续性（优势/弱点/权衡）
-- [ ] GenAI 使用说明 + prompt 附录
-- [ ] 引言 + 结论 + 差距/缺陷说明
-- [ ] Harvard 格式参考文献
-- [ ] 说明未达成的要求 + 已实现的附加功能
+## Report
 
-## 演示与提交（10分）
+- [x] Repository and CI/CD/Infrastructure workflow URLs
+- [ ] Live frontend URL after successful AKS deployment
+- [x] Architecture diagram (Mermaid rendered and visually verified over local HTTP)
+- [x] All required research/release-plan topics
+- [x] Harvard references and bibliography
+- [x] Gaps, trade-offs and requirements-not-achieved disclosure
+- [x] Complete 35-entry prompt log in Appendix A
+- [ ] Student-written section 13 GenAI declaration (template supplied separately)
+- [ ] Final PDF after the declaration and live URL are inserted
 
-- [ ] 录制演示视频（≤20分钟），必须包含两部分：
-  - [ ] (a) pipeline 与 project setup 演示，并明确指出新增的附加功能
-  - [ ] (b) RMP 报告要点的 presentation
-- [ ] 上传 PDF 报告 + 视频到 Brightspace CA Repeat (PT) dropbox（assignment_id=255278）
-- [ ] 提交后如使用云资源，立刻销毁（避免产生费用）
-- [ ] 提前1天提交，预留缓冲时间
-- [ ] 留意9月初可能的讲师视频通话答辩邮件
+## Demonstration and Submission
+
+- [x] Demonstration script timed to 20:00 and covering both required parts
+- [ ] Student records the demonstration video
+- [ ] Student reviews the work and confirms they can explain it
+- [ ] Student submits the PDF and video to CA Repeat (PT), assignment 255278
+- [ ] Destroy Azure resources immediately after recording

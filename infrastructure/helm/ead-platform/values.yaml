@@ -110,6 +110,9 @@ userService:
 reviewService:
   name: review-service
   image: review-service
+  imageTags:
+    blue: ""
+    green: ""
   # Blue/green: both slots are declared, traffic is switched by activeColour.
   blueReplicas: 2
   greenReplicas: 0
