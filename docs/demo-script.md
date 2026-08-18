@@ -15,6 +15,7 @@
 - [ ] Argo CD UI reachable and logged in
 - [x] Green promoted at immutable tag `sha-045fe560...`
 - [ ] Browser tabs pre-opened: GitHub Actions, GHCR packages, code scanning alerts, Argo CD, frontend
+- [ ] `assignments/EAD-ENTPH6000-CA-Repeat-PT/CA-Repeat-RMP-Presentation.pptx` open in presentation mode
 - [ ] Terminal font enlarged; notifications silenced
 
 ---
@@ -111,7 +112,8 @@ kubectl -n ead-platform get scaledobject,hpa
 
 ## Part B — Release Management Plan highlights (5:00)
 
-Slides, not a document read-through.
+Use `assignments/EAD-ENTPH6000-CA-Repeat-PT/CA-Repeat-RMP-Presentation.pptx`.
+Slides 2–6 mirror the sections below; present them rather than reading the report.
 
 ### B1 · Orchestration and delivery choices — 1:00
 AKS on Free tier; GitHub Actions; **continuous delivery, not deployment** — approval gate makes promotion auditable.
