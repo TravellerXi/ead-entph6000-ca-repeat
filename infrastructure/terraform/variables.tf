@@ -44,9 +44,9 @@ variable "node_count" {
 }
 
 variable "node_size" {
-  description = "VM size for the default pool. B2s is the cheapest size that satisfies AKS system requirements."
+  description = "VM size for the default pool. EC2as_v5 is the lowest-cost two-vCPU SKU this subscription permits for AKS in North Europe."
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_EC2as_v5"
 }
 
 variable "namespace" {

@@ -18,7 +18,7 @@ resource "helm_release" "argocd" {
 
   values = [yamlencode({
     global = {
-      # Keep Argo CD small: this cluster has 2 x B2s nodes.
+      # Keep Argo CD small: this assessment cluster has only two nodes.
       resources = {
         requests = { cpu = "50m", memory = "128Mi" }
       }
