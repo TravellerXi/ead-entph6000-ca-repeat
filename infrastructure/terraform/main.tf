@@ -63,6 +63,10 @@ resource "azurerm_kubernetes_cluster" "this" {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
   }
 
+  # AKS enables this alongside managed workload features and does not permit
+  # it to be disabled later. Declare the observed state so subsequent applies
+  # do not attempt the invalid true-to-null transition.
+  oidc_issuer_enabled               = true
   role_based_access_control_enabled = true
 
   tags = var.tags
