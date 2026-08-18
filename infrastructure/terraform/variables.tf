@@ -70,7 +70,7 @@ variable "gitops_repo_url" {
 variable "gitops_revision" {
   description = "Branch or tag Argo CD tracks."
   type        = string
-  default     = "main"
+  default     = "deploy"
 }
 
 variable "tags" {

@@ -3,7 +3,7 @@
 
 global:
   imageRegistry: ghcr.io
-  imageRepository: travellerxi/ead-ca-repeat
+  imageRepository: travellerxi/ead-entph6000-ca-repeat
   # Governs only the four images this pipeline builds. CI sets it to Never so kind
   # uses the locally loaded images; upstream images below must not inherit that.
   imagePullPolicy: IfNotPresent
