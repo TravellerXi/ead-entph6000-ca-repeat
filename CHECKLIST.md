@@ -10,7 +10,7 @@
 - [x] Four non-root multi-stage container images
 - [x] MongoDB StatefulSet, headless Service and bound PVC in the kind smoke test
 - [x] Synchronous reference validation and asynchronous recipe lifecycle events
-- [x] 29 tests passing (6 recipe, 7 user, 6 review, 10 frontend)
+- [x] 30 tests passing (7 recipe, 7 user, 6 review, 10 frontend)
 
 ## CI, CD and Infrastructure
 

@@ -16,7 +16,7 @@ the work produced by the assistant. This version corrects both issues.
 
 ## Work Produced by the Assistant
 
-- Four application services and 29 unit tests
+- Four application services and 30 unit tests
 - The Helm chart, Terraform configuration and operational scripts
 - CI, CD and Infrastructure GitHub Actions workflows
 - The report draft and demonstration script

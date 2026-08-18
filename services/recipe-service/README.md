@@ -10,4 +10,4 @@ mvn test
 mvn spring-boot:run
 ```
 
-Six controller tests cover CRUD and metadata behaviour.
+Seven tests cover CRUD, metadata and the JSON lifecycle-event contract.

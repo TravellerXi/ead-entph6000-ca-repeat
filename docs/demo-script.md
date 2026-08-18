@@ -39,7 +39,7 @@ Walk the five stages: tests → static validation → build+scan → publish →
 Push a trivial commit, or open the latest run.
 
 Show in order:
-1. Matrix jobs green — **"29 unit tests"**
+1. Matrix jobs green — **"30 unit tests"**
 2. Helm lint + the blue/green render assertion
 3. `terraform fmt -check` and `validate`
 4. **Trivy scan** — then open the Security tab to show the SARIF results
