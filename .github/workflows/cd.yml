@@ -151,16 +151,11 @@ jobs:
           kubectl -n "$NAMESPACE" rollout status \
             deployment/review-service-${{ steps.target.outputs.colour }} --timeout=5m
 
-          # Addressed through the colour-pinned Service, not the production one.
-          kubectl -n "$NAMESPACE" run "smoke-$RANDOM" --rm -i --restart=Never \
-            --image=curlimages/curl:8.10.1 -- \
-            curl -fsS --max-time 10 \
-              "http://review-service-${{ steps.target.outputs.colour }}:8080/actuator/health/readiness"
-
-          kubectl -n "$NAMESPACE" run "smoke-api-$RANDOM" --rm -i --restart=Never \
-            --image=curlimages/curl:8.10.1 -- \
-            curl -fsS --max-time 10 \
-              "http://review-service-${{ steps.target.outputs.colour }}:8080/api/reviews/_meta"
+          # Use the real frontend identity: an unlabelled probe Pod is correctly
+          # blocked by the default-deny NetworkPolicy. The colour-pinned Service
+          # reaches the staged slot without touching production traffic.
+          kubectl -n "$NAMESPACE" exec -i deployment/frontend -- node - \
+            "review-service-${{ steps.target.outputs.colour }}" < scripts/smoke-slot.js
 
       - name: Confirm production traffic is still on the previous slot
         run: |
