@@ -28,6 +28,7 @@
 - [x] Argo CD reconciles a dedicated `deploy` branch; `main` remains protected
 - [x] Initial Terraform plan/apply: 10 add, 0 change, 0 destroy (`32161529968`)
 - [x] Live AKS and Argo CD reconciliation; corrective apply was 0 add, 1 in-place change, 0 destroy (`32167126362`)
+- [x] Non-destructive remote-state destroy plan: 0 add, 0 change, 10 destroy (`32174652446`)
 - [x] Protected two-phase green promotion at immutable tag (`32167692249`)
 - [x] Live public health/readiness, CSS and RabbitMQ cascade verified
 - [ ] Successful live destroy after recording
@@ -57,7 +58,7 @@ therefore **not** claimed as additional features.
 
 ## Demonstration and Submission
 
-- [x] Demonstration script timed to 20:00 and covering both required parts
+- [x] Demonstration script timed to 18:00 and covering both required parts
 - [ ] Student records the demonstration video
 - [ ] Student reviews the work and confirms they can explain it
 - [ ] Student submits the PDF and video to CA Repeat (PT), assignment 255278

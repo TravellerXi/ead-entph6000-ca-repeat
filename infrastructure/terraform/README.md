@@ -11,6 +11,7 @@ can destroy resources created by an earlier one. Bootstrap it once:
 bash scripts/bootstrap-state.sh
 ```
 
-The Infrastructure workflow exposes audited `plan`, `apply` and `destroy`
-actions. Verified plan run `32131375061` reported **10 to add, 0 to change, 0
-to destroy**; apply and destroy were skipped.
+The Infrastructure workflow exposes read-only `plan`/`plan-destroy` plus
+protected `apply`/`destroy` actions. Apply run `32161529968` created the
+platform. Read-only run `32174652446` then resolved the real remote state as
+**0 to add, 0 to change, 10 to destroy**; its apply/destroy steps were skipped.

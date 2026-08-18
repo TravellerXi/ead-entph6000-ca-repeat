@@ -83,7 +83,10 @@ gh workflow run cd.yml -f colour=green -f image_tag=<sha-tag>
 kubectl -n ead-platform get svc frontend \
   -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 
-# 5. Tear everything down through the same remote state
+# 5. Preview teardown without changing the live cluster
+gh workflow run infrastructure.yml -f action=plan-destroy
+
+# 6. After recording, tear everything down through the same remote state
 gh workflow run infrastructure.yml -f action=destroy
 ```
 
