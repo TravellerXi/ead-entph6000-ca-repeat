@@ -9,7 +9,9 @@ the student and appears in section 13 of the submitted report.
 - **Tool:** GitHub Copilot Chat in Visual Studio Code (agent mode)
 - **Model:** Claude Opus 5
 - **Period:** 13-18 August 2026
-- **Full prompts:** reproduced verbatim in Appendix A of the report
+- **Prompt record:** 38 entries in Appendix A; direct chat is verbatim, while
+  three in-editor approval answers are reconstructed from the stored options
+  and the immediately following confirmation because the raw return payload is absent
 
 Two earlier versions of this record named the model incorrectly and understated
 the work produced by the assistant. This version corrects both issues.
@@ -21,7 +23,7 @@ the work produced by the assistant. This version corrects both issues.
 - CI, CD and Infrastructure GitHub Actions workflows
 - The report draft and demonstration script
 - Course-material research, including local transcription of eight recordings
-- Iterative execution and repair of the real CI pipeline and Terraform plan
+- Iterative execution and repair of real CI, Terraform, Argo CD and blue/green CD
 
 ## Student Directions Recorded in the Prompt Log
 
@@ -35,17 +37,21 @@ the work produced by the assistant. This version corrects both issues.
 
 ## Verified Execution Record
 
-- CI run `31992514705`: all ten jobs passed, including Trivy scans, a kind
-  deployment, a frontend-to-MongoDB round trip, PVC binding and a negative
-  NetworkPolicy test
-- Infrastructure run `32131375061`: remote-state init, formatting, validation and
-  Terraform plan passed; apply and destroy were skipped
-- Infrastructure plan: 10 to add, 0 to change, 0 to destroy
+- CI run `32167076883`: all ten jobs passed, including 30 tests, four Trivy
+  gates, kind persistence, RabbitMQ cascade, PVC binding and NetworkPolicy denial
+- Infrastructure run `32161529968`: real AKS/Argo CD apply succeeded
+- Infrastructure run `32167126362`: corrective `0 add / 1 change / 0 destroy`
+  applied the Argo/autoscaler ownership rule
+- CD run `32167692249`: inactive green slot smoke-tested, then promoted at an
+  immutable image tag; final Argo status `Synced / Healthy`
+- Infrastructure run `32174652446`: non-destructive real-state plan reported
+  `0 add / 0 change / 10 destroy`; mutating steps were skipped
+- Public `UP / READY / green`, CSS loading and RabbitMQ cascade were verified live
 
 ## Student-Owned Actions
 
 - Write the section 13 GenAI declaration in their own words
 - Understand and be able to explain the architecture and implementation
-- Record the demonstration video
-- Approve the cost-incurring Azure deployment and subsequent destruction
+- Record and review the <=20-minute demonstration
+- Run/authorise the real destroy after recording and verify Azure deletion
 - Review and submit the final deliverables
