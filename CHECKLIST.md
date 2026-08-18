@@ -26,8 +26,10 @@
 - [x] Liveness/readiness probes, CPU HPAs and KEDA queue-depth scaling
 - [x] Non-root/read-only security contexts, generated Secrets, PSA and default deny
 - [x] Argo CD reconciles a dedicated `deploy` branch; `main` remains protected
-- [x] Terraform plan: 10 add, 0 change, 0 destroy (apply/destroy skipped in plan run)
-- [ ] Successful live AKS apply and Argo CD reconciliation (in progress)
+- [x] Initial Terraform plan/apply: 10 add, 0 change, 0 destroy (`32161529968`)
+- [x] Live AKS and Argo CD reconciliation; corrective apply was 0 add, 1 in-place change, 0 destroy (`32167126362`)
+- [x] Protected two-phase green promotion at immutable tag (`32167692249`)
+- [x] Live public health/readiness, CSS and RabbitMQ cascade verified
 - [ ] Successful live destroy after recording
 
 ## Additional Features (20 marks)
@@ -44,12 +46,12 @@ therefore **not** claimed as additional features.
 ## Report
 
 - [x] Repository and CI/CD/Infrastructure workflow URLs
-- [ ] Live frontend URL after successful AKS deployment
+- [x] Live frontend URL: http://4.245.131.37 (until post-recording destroy)
 - [x] Architecture diagram (Mermaid rendered and visually verified over local HTTP)
 - [x] All required research/release-plan topics
 - [x] Harvard references and bibliography
 - [x] Gaps, trade-offs and requirements-not-achieved disclosure
-- [x] Complete 35-entry prompt log in Appendix A
+- [x] Complete 38-entry prompt log in Appendix A, checked against session store and transcript
 - [ ] Student-written section 13 GenAI declaration (template supplied separately)
 - [ ] Final PDF after the declaration and live URL are inserted
 

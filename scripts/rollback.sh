@@ -3,7 +3,6 @@
 #
 #   rolling   -> kubectl rollout undo, for services released with RollingUpdate
 #   bluegreen -> switch the Service selector back to the previous slot
-#   helm      -> helm rollback, which reverts every object in the release at once
 #
 # BREAK-GLASS ONLY. Argo CD owns this namespace with selfHeal enabled, so every
 # mode below is reverted within seconds unless auto-sync is paused first:
@@ -16,7 +15,6 @@
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ead-platform}"
-RELEASE="${RELEASE:-ead}"
 MODE="${1:-}"
 
 case "$MODE" in
@@ -38,16 +36,8 @@ case "$MODE" in
     exec "$(dirname "$0")/switch-colour.sh" "$previous"
     ;;
 
-  helm)
-    echo "==> release history"
-    helm history "$RELEASE" --namespace "$NAMESPACE"
-    echo "==> rolling back one revision"
-    helm rollback "$RELEASE" --namespace "$NAMESPACE" --wait --timeout 5m
-    helm history "$RELEASE" --namespace "$NAMESPACE"
-    ;;
-
   *)
-    echo "usage: $0 <rolling [deployment]|bluegreen|helm>" >&2
+    echo "usage: $0 <rolling [deployment]|bluegreen>" >&2
     exit 2
     ;;
 esac

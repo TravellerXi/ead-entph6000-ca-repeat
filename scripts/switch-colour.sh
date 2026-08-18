@@ -10,14 +10,18 @@
 #   kubectl -n argocd patch application ead-platform --type merge \
 #     -p '{"spec":{"syncPolicy":{"automated":null}}}'
 #
+# Reconcile the incident change into Git before restoring normal control:
+#
+#   kubectl -n argocd patch application ead-platform --type merge \
+#     -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+#
 # The routine path is the CD workflow, which commits activeColour to
 # values-live.yaml and lets Argo CD move the selector.
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ead-platform}"
-RELEASE="${RELEASE:-ead}"
-CHART="${CHART:-infrastructure/helm/ead-platform}"
 TARGET="${1:-}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 if [[ "$TARGET" != "blue" && "$TARGET" != "green" ]]; then
   echo "usage: $0 <blue|green>" >&2
@@ -37,20 +41,17 @@ echo "==> ensuring ${TARGET} slot is ready before switching traffic"
 kubectl -n "$NAMESPACE" rollout status "deployment/review-service-${TARGET}" --timeout=5m
 
 echo "==> smoke testing the ${TARGET} slot directly"
-kubectl -n "$NAMESPACE" run "smoke-$RANDOM" --rm -i --restart=Never \
-  --image=curlimages/curl:8.10.1 -- \
-  curl -fsS "http://review-service-${TARGET}:8080/actuator/health/readiness"
+kubectl -n "$NAMESPACE" exec -i deployment/frontend -- node - \
+  "review-service-${TARGET}" < "${SCRIPT_DIR}/smoke-slot.js"
 
 echo "==> switching traffic to ${TARGET}"
-helm upgrade "$RELEASE" "$CHART" \
-  --namespace "$NAMESPACE" \
-  --reuse-values \
-  -f "${CHART}/values-${TARGET}.yaml" \
-  --wait --timeout 5m
+kubectl -n "$NAMESPACE" patch service review-service --type=merge \
+  -p "{\"metadata\":{\"annotations\":{\"ead.tudublin.ie/active-colour\":\"${TARGET}\"}},\"spec\":{\"selector\":{\"ead.tudublin.ie/colour\":\"${TARGET}\"}}}"
 
 echo "==> verifying"
 kubectl -n "$NAMESPACE" get svc review-service \
   -o jsonpath='{.metadata.annotations.ead\.tudublin\.ie/active-colour}{"\n"}'
-kubectl -n "$NAMESPACE" get endpoints review-service
+kubectl -n "$NAMESPACE" get endpointslice \
+  -l kubernetes.io/service-name=review-service
 
 echo "done. to roll back: $0 ${current}"

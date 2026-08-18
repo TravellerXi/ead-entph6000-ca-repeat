@@ -9,11 +9,11 @@
 
 ## Pre-flight checklist (do before pressing record)
 
-- [ ] `terraform apply` completed; cluster running
-- [ ] `kubectl get pods -n ead-platform` all `Running`
-- [ ] Frontend LoadBalancer IP resolved and page loads
+- [x] `terraform apply` completed; cluster running
+- [x] `kubectl get pods -n ead-platform` all `Running`
+- [x] Frontend LoadBalancer IP `4.245.131.37` resolved and page loads
 - [ ] Argo CD UI reachable and logged in
-- [ ] A green-slot image tag built and ready to promote
+- [x] Green promoted at immutable tag `sha-045fe560...`
 - [ ] Browser tabs pre-opened: GitHub Actions, GHCR packages, code scanning alerts, Argo CD, frontend
 - [ ] Terminal font enlarged; notifications silenced
 
@@ -65,32 +65,41 @@ kubectl -n ead-platform rollout history deployment/recipe-service
 > "maxUnavailable is zero, so capacity never dips during a release. Rollback is ReplicaSet history — about thirty seconds."
 
 ### A6 · Deployment strategy 2 — Blue/Green + instant rollback — 2:00
-Show the frontend badge (currently **blue**).
+Show the frontend badge (currently **green**) and CD run `32167692249`.
 
 ```
 kubectl -n ead-platform get svc review-service -o jsonpath='{...active-colour}'
-./scripts/switch-colour.sh green
+git log origin/deploy --oneline -2
+kubectl -n ead-platform get deploy review-service-blue review-service-green
 ```
 
-Refresh the page — badge turns **green**.
+Open the CD steps for staged convergence, inactive-slot smoke, the unchanged
+production selector, and the separate promotion commit.
 
-> "Both slots run side by side. The release is a Service selector change, not a pod rollout, so cut-over and rollback are near-instant. The script smoke-tests the idle slot through its colour-pinned Service before any traffic moves."
+> "Both slots run side by side. The release is a Service selector change, not a pod rollout, so cut-over and rollback are near-instant. The workflow smoke-tested green through its colour-pinned Service while production still selected blue, then committed the switch."
 
-Roll back: `./scripts/rollback.sh bluegreen` — badge returns to blue.
+Explain that routine rollback reverts the Git deployment commit. The
+`switch-colour.sh` and `rollback.sh` scripts are break-glass paths used only
+after pausing Argo auto-sync; do not change the live cluster during recording.
 
 ### A7 · Additional features — 3:00 ⚠ **highest-value segment, 20 marks**
 State plainly on camera:
 
 > "Three technologies not taught in this module: Argo CD, RabbitMQ and KEDA. I verified this by reading every lecture and lab in Weeks 1 to 11 — including the Week 2 guest material — before choosing. I originally planned Prometheus and Grafana and rejected them, because Week 10 covers both and they would have scored zero."
 
-**Argo CD** — open the UI, show the `ead-platform` Application `Synced`/`Healthy`. Then:
-```
-kubectl -n ead-platform scale deployment/frontend --replicas=5
-```
-Watch Argo CD revert it.
-> "Self-heal. Drift is corrected without a pipeline run."
+**Argo CD** — open the UI, show the `ead-platform` Application `Synced`/`Healthy`,
+revision `c3f7361`, and automated self-heal. Replica counts are intentionally
+excluded because HPA/KEDA own that field; image, selector and configuration
+drift remain Argo-owned.
 
-**RabbitMQ** — open the management UI. Create a recipe in the frontend, show `recipe.created` on the exchange. Delete it, show reviews cascade away.
+Do not use `kubectl scale` as a drift demo: it would correctly be retained by
+the autoscaler ownership rule.
+
+**RabbitMQ** — run the verified cross-service scenario:
+```
+Get-Content scripts/smoke-events.js -Raw |
+	kubectl exec -i -n ead-platform deployment/frontend -- node -
+```
 > "recipe-service does not know review-service exists."
 
 **KEDA** — show the `ScaledObject`, then:
@@ -127,9 +136,13 @@ Then the starter-code findings:
 > "Three real defects in the supplied project: credentials hard-coded twice, and `actuator` exposing `env`, which serves the entire configuration — including those credentials — over HTTP. I found these by reading the code, and fixed all three."
 
 ### B5 · Sustainability and honest gaps — 1:00
-Ten pods on two nodes; requests and limits everywhere; KEDA scales the consumer down when idle; `terraform destroy` makes the footprint zero between demonstrations.
+Ten pods on two nodes; requests and limits everywhere; KEDA scales the consumer
+down when idle; `terraform destroy` removes cluster compute between demonstrations,
+leaving only the small remote-state store and registry artefacts.
 
-State the gaps plainly: no metrics backend or alerting; no scheduled off-site backup; no load testing; single-replica MongoDB and RabbitMQ; local Terraform state.
+State the gaps plainly: no application-level metrics or alerting; no scheduled
+off-site backup; no load testing; single-replica MongoDB and RabbitMQ. The
+remote-state account is a bootstrap dependency outside the root module.
 
 ---
 
