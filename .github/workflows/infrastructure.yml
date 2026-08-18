@@ -23,6 +23,14 @@ jobs:
   terraform:
     name: Terraform ${{ github.event.inputs.action }}
     runs-on: ubuntu-latest
+    env:
+      # The azurerm backend refuses Azure CLI authentication when the CLI is
+      # logged in as a service principal. Terraform's native ARM variables
+      # provide the supported non-interactive authentication path instead.
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     environment:
       # apply/destroy require a reviewer, so infrastructure change stays a
       # deliberate, auditable step rather than an accident.
