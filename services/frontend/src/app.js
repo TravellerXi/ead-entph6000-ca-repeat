@@ -40,7 +40,17 @@ function layout(title, content) {
 function createApp() {
   const app = express();
 
-  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"] } } }));
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // The assessment endpoint is an HTTP-only LoadBalancer IP. Helmet's
+        // default upgrade directive rewrites its own CSS request to HTTPS and
+        // leaves the live UI unstyled; all other CSP protections remain active.
+        'upgrade-insecure-requests': null,
+      },
+    },
+  }));
   app.use(express.urlencoded({ extended: false, limit: '32kb' }));
   app.use(express.json({ limit: '32kb' }));
   app.use('/static', express.static(`${__dirname}/../public`, { maxAge: '1h' }));

@@ -106,6 +106,8 @@ describe('security headers', () => {
     const res = await request(app).get('/healthz');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['content-security-policy']).toBeDefined();
+    expect(res.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(res.headers['content-security-policy']).not.toContain('upgrade-insecure-requests');
     expect(res.headers['x-powered-by']).toBeUndefined();
   });
 });
