@@ -275,6 +275,10 @@ jobs:
           run_curl curl -fsS --max-time 15 http://frontend:80/ \
             | grep -q ci-smoke && echo "round trip frontend -> recipe-service -> MongoDB confirmed"
 
+      - name: Exercise synchronous references and RabbitMQ cascade
+        # Run from the real frontend Pod so NetworkPolicy identity is genuine.
+        run: kubectl -n ead-platform exec -i deployment/frontend -- node - < scripts/smoke-events.js
+
       - name: Prove the NetworkPolicy actually blocks unauthorised pods
         run: |
           # An unlabelled pod must not reach a backend directly. curl exits 28 on
