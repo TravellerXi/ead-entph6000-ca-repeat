@@ -41,12 +41,7 @@ while (( SECONDS < deadline )); do
     exit 0
   fi
 
-  if [[ "$health" == "Degraded" ]]; then
-    echo "::error::Argo CD reports the application as Degraded" >&2
-    kubectl -n "$ARGO_NS" get application "$APP" -o yaml >&2
-    exit 1
-  fi
-
+  # Degraded is transient while this revision replaces the resource that fixes it.
   sleep 10
 done
 

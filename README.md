@@ -22,7 +22,7 @@ graph LR
 
 | Service | Stack | Entity | Notes |
 |---|---|---|---|
-| `frontend` | Node.js 20 / Express | — | Only externally exposed workload |
+| `frontend` | Node.js 22 / Express | — | Only externally exposed workload |
 | `recipe-service` | Java 17 / Spring Boot | Recipe | Publishes lifecycle events |
 | `user-service` | Java 17 / Spring Boot | User | BCrypt credential handling |
 | `review-service` | Java 17 / Spring Boot | Review | References Recipe + User; blue/green slot |
@@ -34,7 +34,7 @@ graph LR
 ```
 services/            four microservices, each with Dockerfile and tests
 infrastructure/
-  helm/ead-platform/ chart rendering 24 Kubernetes objects
+  helm/ead-platform/ chart rendering 25 Kubernetes objects
   terraform/         azurerm provisions the AKS cluster itself
 .github/workflows/   ci.yml · cd.yml · infrastructure.yml
 scripts/             rollback, blue/green switch, backup and restore
@@ -50,12 +50,11 @@ Two strategies, matched to risk profile:
 | **RollingUpdate** (`maxUnavailable: 0`) | recipe, user, frontend | `kubectl rollout undo` |
 | **Blue/Green** (Service selector pinned to `activeColour`) | review-service | Selector switch — the previous slot never stopped running |
 
-```bash
-./scripts/switch-colour.sh green    # promote, after smoke-testing the idle slot
-./scripts/rollback.sh bluegreen     # revert
-./scripts/rollback.sh rolling recipe-service
-./scripts/rollback.sh helm
-```
+Routine promotion is the protected `CD` workflow: it updates only the inactive
+slot at an immutable commit-SHA tag, smoke-tests its colour-pinned Service, then
+commits the selector switch to the `deploy` branch. The scripts are documented
+break-glass tools; pause Argo CD auto-sync before using them or self-heal will
+correct the manual drift.
 
 ## Additional features (not taught in the module)
 
@@ -70,31 +69,28 @@ Verified against every lecture, lab and demo script in Weeks 1–11 plus the Wee
 ## Quick start
 
 ```bash
-# 1. Provision infrastructure (creates the AKS cluster from nothing)
-cd infrastructure/terraform
-cp example.tfvars terraform.tfvars     # then edit
-terraform init && terraform apply
+# 1. Bootstrap remote state once, then set the printed GitHub secrets
+bash scripts/bootstrap-state.sh
 
-# 2. Connect kubectl
-az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing
+# 2. Run the protected Infrastructure workflow: plan, then apply
+gh workflow run infrastructure.yml -f action=plan
+gh workflow run infrastructure.yml -f action=apply
 
-# 3. Deploy the platform
-helm upgrade --install ead ../helm/ead-platform \
-  --namespace ead-platform --create-namespace \
-  -f ../helm/ead-platform/values-blue.yaml --wait
+# 3. Argo CD reconciles the chart from the deploy branch. Promote via CD
+gh workflow run cd.yml -f colour=green -f image_tag=<sha-tag>
 
-# 4. Resolve the public URL
+# 4. Resolve the public URL after reconciliation
 kubectl -n ead-platform get svc frontend \
   -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 
-# 5. Tear everything down (no lingering cost)
-terraform destroy
+# 5. Tear everything down through the same remote state
+gh workflow run infrastructure.yml -f action=destroy
 ```
 
 ## Local verification (no cluster required)
 
 ```bash
-cd services/recipe-service && mvn test     # 6 tests
+cd services/recipe-service && mvn test     # 7 tests
 cd services/user-service   && mvn test     # 7 tests
 cd services/review-service && mvn test     # 6 tests
 cd services/frontend       && npm test     # 10 tests
