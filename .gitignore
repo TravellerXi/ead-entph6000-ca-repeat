@@ -45,3 +45,11 @@ Thumbs.db
 docs/course-materials/
 services/starter-backend/
 services/starter-frontend/
+
+# Review-process artefacts — never ship with the deliverable
+audit-v*.md
+read-v*.md
+edits-v*.md
+judge-v*.md
+adjudication-v*.md
+deadlock-*.md

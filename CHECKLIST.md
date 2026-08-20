@@ -35,9 +35,17 @@
 
 ## Additional Features (20 marks)
 
-Verified against 37 text sources and 73,383 words of lecture transcript/audio.
-Prometheus/Grafana, Istio, Trivy and the deployment strategies are taught and are
-therefore **not** claimed as additional features.
+Screened against the 22 supplied lab manifests and 9 lecture transcripts
+(approximately 73,000 words). Of the 16 lecture recordings only 1 carried
+captions; 8 were transcribed locally with whisper.cpp and the remaining 7 were
+covered by same-week texts. A technology counted as taught only where a lecture,
+lab walkthrough or demonstration explained its purpose. Argo CD and KEDA have no
+occurrence in any course material. RabbitMQ is never taught, but does appear as an
+unexplained dependency inside the W03 AKS supplementary sample manifest
+(`aks-store-quickstart.yaml`).
+Prometheus/Grafana (W10), Istio (named once in W05) and image scanning (W07, tool
+not named) are covered by the module and are therefore **not** claimed as
+additional features.
 
 - [x] Argo CD GitOps
 - [x] RabbitMQ event-driven messaging
