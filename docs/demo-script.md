@@ -119,7 +119,7 @@ Slides 2–6 mirror the sections below; present them rather than reading the rep
 AKS on Free tier; GitHub Actions; **continuous delivery, not deployment** — approval gate makes promotion auditable.
 
 ### B2 · The release plan itself — 1:30
-Change process end to end: branch → PR → CI → review → merge → publish → approval → deploy → Argo CD holds state.
+Change process end to end: commit to protected `main` → CI → publish → approval → deploy → Argo CD holds state. Single-author repo, so required checks stand in for peer review.
 
 Three rollback tiers table. Emphasise blue/green is fastest *because the previous version never stopped running*.
 
